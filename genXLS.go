@@ -1,0 +1,493 @@
+package xlsrpt
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+	"reflect"
+	"sort"
+	"strconv"
+	"time"
+
+	"github.com/tealeg/xlsx"
+)
+
+// RepColumns Report Columns Definition
+type RepColumns struct {
+	Title   string
+	SumFlag bool
+}
+
+// RepParams Parameters for Report Generation
+type RepParams struct {
+	RepTitle   string
+	RepSheet   string
+	RepCols    []RepColumns
+	Query      string
+	FilePath   string
+	AltBg      bool
+	AutoFilter bool
+}
+
+// MultiSheetRep type is used for multiple sheets reports
+type MultiSheetRep struct {
+	Params RepParams
+	Data   ReportData
+	DB     *sql.DB
+}
+
+// ReportData defines LoadRows function that must be implemented
+type ReportData interface {
+	LoadRows(rows *sql.Rows) error
+}
+
+// Vervose can be used to print information about Excel File generation when set to <true>
+var Vervose bool
+
+// Debug can be used to print debug information about Excel File generation when set to <true>
+var Debug bool
+
+// ExcelReport generates excel report
+func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
+	var file *xlsx.File
+
+	file = xlsx.NewFile()
+
+	rows, err := db.Query(rp.Query)
+	if err != nil {
+		return err
+	}
+
+	rptData.LoadRows(rows)
+	rows.Close()
+
+	if rp.FilePath == "" {
+		rp.FilePath = rp.RepTitle + ".xlsx"
+	}
+	if rp.RepSheet == "" {
+		if len(rp.RepTitle) > 30 {
+			rp.RepSheet = rp.RepTitle[:30]
+		} else {
+			rp.RepSheet = rp.RepTitle
+		}
+	}
+
+	start := time.Now()
+	err = genSheet(file, rp, rptData)
+	if err != nil {
+		fmt.Println("Warning, error generating Excel Sheet:", err.Error())
+	}
+	if Debug {
+		fmt.Println("genSheet() Took:", time.Since(start))
+	}
+
+	err = file.Save(rp.FilePath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ExcelMultiSheet generates a Report with Multiple Sheets
+func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
+	var file *xlsx.File
+
+	file = xlsx.NewFile()
+
+	for _, k := range reports {
+		rows, err := k.DB.Query(k.Params.Query)
+		if err != nil {
+			return err
+		}
+
+		k.Data.LoadRows(rows)
+		rows.Close()
+
+		if k.Params.RepSheet == "" {
+			if len(k.Params.RepTitle) > 30 {
+				k.Params.RepSheet = k.Params.RepTitle[:30]
+			} else {
+				k.Params.RepSheet = k.Params.RepTitle
+			}
+		}
+
+		err = genSheet(file, k.Params, k.Data)
+		if err != nil {
+			fmt.Println("Warning, error generating Excel Sheet:", err.Error())
+		}
+	}
+
+	err := file.Save(filePath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ExcelFromDB can be used when the selected columns are not known uses reflect to infer data type directly from DB
+func ExcelFromDB(rp RepParams, db *sql.DB) error {
+	var file *xlsx.File
+
+	file = xlsx.NewFile()
+
+	if rp.FilePath == "" {
+		rp.FilePath = rp.RepTitle + ".xlsx"
+	}
+	if rp.RepSheet == "" {
+		if len(rp.RepTitle) > 30 {
+			rp.RepSheet = rp.RepTitle[:30]
+		} else {
+			rp.RepSheet = rp.RepTitle
+		}
+	}
+
+	err := genSheetFromDB(file, rp, db)
+	if err != nil {
+		fmt.Println("Warning, error generating Excel Sheet:", err.Error())
+	}
+
+	err = file.Save(rp.FilePath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ExcelMultiSheetFromDB generates a Report with Multiple Sheets uses reflect to infer data type directly from DB
+func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
+
+	// Make sure they are sorted
+	sort.Strings(UntouchCols)
+	var file *xlsx.File
+
+	file = xlsx.NewFile()
+
+	for _, k := range reports {
+		if k.Params.RepSheet == "" {
+			if len(k.Params.RepTitle) > 30 {
+				k.Params.RepSheet = k.Params.RepTitle[:30]
+			} else {
+				k.Params.RepSheet = k.Params.RepTitle
+			}
+		}
+		if Vervose {
+			fmt.Println("Adding Sheet", k.Params.RepSheet)
+		}
+		genSheetFromDB(file, k.Params, k.DB)
+	}
+
+	err := file.Save(filePath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// genSheet adds the report in a new sheet
+func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
+	var sheet *xlsx.Sheet
+	var row *xlsx.Row
+	var rdata = reflect.ValueOf(dataMap)
+	var timeKind = reflect.TypeOf(time.Time{}).Kind()
+
+	if rdata.Kind() != reflect.Map {
+		return errors.New("dataMap is not a map")
+	}
+	sheet, err := file.AddSheet(rp.RepSheet)
+	if err != nil {
+		return err
+	}
+
+	// Add Titles
+	row = sheet.AddRow()
+	for _, k := range rp.RepCols {
+		cell := row.AddCell()
+		s := cell.GetStyle()
+		s.Fill.PatternType = "solid"
+		s.Fill.FgColor = "004472C4"
+		s.Font.Color = "00FFFFFF"
+		s.Font.Bold = true
+		s.ApplyFill = true
+		s.ApplyFont = true
+		cell.Value = k.Title
+	}
+
+	var i int
+	flag := false
+
+	/*
+		// Add Rows (Ordered Rows, fast)
+		// This code assumes key is int, is incremental and begins at 1
+		// Assures 100% that the report will be generated in the intended order
+		nitems := rdata.Len()
+		for i = 1; i < nitems; i++ {
+			v := rdata.MapIndex(reflect.ValueOf(i))
+			fmt.Printf("Value: %+v \n", v.Interface())
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+
+
+		// Add Rows (Unordered Rows, flexible, faster)
+		// This code is more flexible, works regardless of key used.
+		// Order of map items on go is unspecified, so the excel will have unordered rows
+		iter := rdata.MapRange()
+		for i = 0; iter.Next(); i++ {
+			v := iter.Value()
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	*/
+
+	// Add Rows (Ordered Rows, flexible, slower)
+	// This third implementation intends to accomplish map ordering indepent of key type
+	// Implementer of LoadRows can use any column data for map Type, yielding rows ordered by that column
+	tkeys := reflect.TypeOf(dataMap).Key() // Type of the Map Key
+	rkeys := rdata.MapKeys()               // Slice with Map Keys
+	qkeys := len(rkeys)                    // Alternative: rdata.Len()
+
+	//switch <- Kind of Map Keys
+	switch tkeys.Kind() {
+	case reflect.Int:
+		ordKeys := make([]int, qkeys, qkeys)
+		for i, k := range rkeys {
+			ordKeys[i] = int(k.Int())
+		}
+		sort.Ints(ordKeys)
+		for i, k := range ordKeys {
+			v := rdata.MapIndex(reflect.ValueOf(k))
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	case reflect.Float32:
+		ordKeys := make([]float32, qkeys, qkeys)
+		for i, k := range rkeys {
+			ordKeys[i] = float32(k.Float())
+		}
+		sort.Slice(ordKeys, func(i, j int) bool {
+			return ordKeys[i] < ordKeys[j]
+		})
+		for i, k := range ordKeys {
+			v := rdata.MapIndex(reflect.ValueOf(k))
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	case reflect.Float64:
+		ordKeys := make([]float64, qkeys, qkeys)
+		for i, k := range rkeys {
+			ordKeys[i] = float64(k.Float())
+		}
+		sort.Float64s(ordKeys)
+		for i, k := range ordKeys {
+			v := rdata.MapIndex(reflect.ValueOf(k))
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	case reflect.String:
+		ordKeys := make([]string, qkeys, qkeys)
+		for i, k := range rkeys {
+			ordKeys[i] = (k.String())
+		}
+		sort.Strings(ordKeys)
+		for i, k := range ordKeys {
+			v := rdata.MapIndex(reflect.ValueOf(k))
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	case timeKind:
+		ordKeys := make([]time.Time, qkeys, qkeys)
+		for i, k := range rkeys {
+			kTime := k.Interface().(time.Time)
+			ordKeys[i] = time.Time(kTime)
+		}
+		sort.Slice(ordKeys, func(i, j int) bool {
+			return ordKeys[i].Before(ordKeys[j])
+		})
+		for i, k := range ordKeys {
+			v := rdata.MapIndex(reflect.ValueOf(k))
+
+			if rp.AltBg {
+				flag = i%2 == 0
+			}
+			row = sheet.AddRow()
+			addRow(v.Interface(), row, flag)
+		}
+	default:
+		return fmt.Errorf("dataMap key not a valid kind (%+v)", reflect.TypeOf(dataMap).Key().Kind())
+	}
+
+	_ = sheet.SetColWidth(0, len(rp.RepCols)-1, 28.0)
+	if rp.AutoFilter {
+		brCell := string(64+len(rp.RepCols)) + strconv.Itoa(i+1)
+		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: brCell}
+	}
+
+	if qkeys != 0 { // If there's Data to be Processed
+		row = sheet.AddRow()
+
+		for c, col := range rp.RepCols {
+			colLetter := string(c + 65)
+			cell := row.AddCell()
+			s := cell.GetStyle()
+			s.Fill.PatternType = "solid"
+			s.Fill.FgColor = "00D0CECE"
+			s.ApplyFill = true
+			if col.SumFlag {
+				formula := "=SUBTOTAL(109," + colLetter + "2:" + colLetter + strconv.Itoa(qkeys+1) + ")"
+				cell.SetFloatWithFormat(0, "$#,##0.00")
+				cell.SetFormula(formula)
+				s.Font.Bold = true
+				s.Font.Color = "00FF0000"
+				s.Alignment.Horizontal = "left"
+				s.ApplyAlignment = true
+				s.ApplyFont = true
+			}
+		}
+	}
+	return nil
+}
+
+func genSheetFromDB(file *xlsx.File, rp RepParams, db *sql.DB) error {
+	var sheet *xlsx.Sheet
+	var row *xlsx.Row
+
+	sheet, err := file.AddSheet(rp.RepSheet)
+	if err != nil {
+		return err
+	}
+
+	rows, err := db.Query(rp.Query)
+	if err != nil {
+		return err
+	}
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	// Add Titles
+	row = sheet.AddRow()
+	for _, k := range cols {
+		cell := row.AddCell()
+		s := cell.GetStyle()
+		s.Fill.PatternType = "solid"
+		s.Fill.FgColor = "004472C4"
+		s.Font.Color = "00FFFFFF"
+		s.Font.Bold = true
+		s.ApplyFill = true
+		s.ApplyFont = true
+		cell.Value = k
+	}
+
+	var i int
+	flag := false
+	for rows.Next() {
+		// Create a slice of interface{}'s to represent each column,
+		// and a second slice to contain pointers to each item in the columns slice.
+		columns := make([]interface{}, len(cols))
+		columnPointers := make([]interface{}, len(cols))
+		for i := range columns {
+			columnPointers[i] = &columns[i]
+		}
+		// Scan the result into the column pointers...
+		if err = rows.Scan(columnPointers...); err != nil {
+			return err
+		}
+
+		// Create our map, and retrieve the value for each column from the pointers slice,
+		// storing it in the map with the name of the column as the key.
+		m := make(map[string]interface{})
+		for i, colName := range cols {
+			val := columnPointers[i].(*interface{})
+			m[colName] = *val
+		}
+
+		if rp.AltBg {
+			flag = i%2 == 0
+		}
+		row = sheet.AddRow()
+		addMapRow(cols, m, row, flag) // v.Interface(), row, flag)
+		i++
+		//fmt.Println("Processing Line:", i)
+	}
+
+	//fmt.Println("Report Lines Quantity:", i)
+	_ = sheet.SetColWidth(0, len(cols)-1, 28.0)
+	if rp.AutoFilter {
+		var brCell string
+		c := len(cols)
+		for i = 65; c > 26; c -= 26 {
+			brCell = string(i)
+			i++
+		}
+		brCell = brCell + string(64+c) + strconv.Itoa(i+1)
+		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: brCell}
+	}
+
+	if i != 0 { // If there's Data to be Processed
+		row = sheet.AddRow()
+
+		for c := 0; c < len(cols); c++ {
+			//for c, col := range cols {
+			//colLetter := string(c + 65)
+			cell := row.AddCell()
+			s := cell.GetStyle()
+			s.Fill.PatternType = "solid"
+			s.Fill.FgColor = "00D0CECE"
+			s.ApplyFill = true
+			/*
+				if col.SumFlag {
+					formula := "SUM(" + colLetter + "2:" + colLetter + strconv.Itoa(i+1) + ")"
+					cell.SetFloatWithFormat(0, "$#,##0.00")
+					cell.SetFormula(formula)
+					s.Font.Bold = true
+					s.Font.Color = "00FF0000"
+					s.Alignment.Horizontal = "left"
+					s.ApplyAlignment = true
+					s.ApplyFont = true
+				}
+			*/
+		}
+	}
+
+	return nil
+}
+
+func runningtime(s string) (string, time.Time) {
+	log.Println("Start:	", s)
+	return s, time.Now()
+}
+
+func track(s string, startTime time.Time) {
+	endTime := time.Now()
+	log.Println("End:	", s, "took", endTime.Sub(startTime))
+}
