@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -28,6 +29,7 @@ type RepParams struct {
 	FilePath   string
 	AltBg      bool
 	AutoFilter bool
+	NoTitleRow bool
 }
 
 // MultiSheetRep type is used for multiple sheets reports
@@ -64,7 +66,18 @@ func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 
 	if rp.FilePath == "" {
 		rp.FilePath = rp.RepTitle + ".xlsx"
+	} else {
+		match, _ := regexp.MatchString(`(?m)([a-zA-Z0-9\s_\\.\-\(\):])+(.xls|.xlsx)$`, rp.FilePath)
+		if !match {
+			rp.FilePath = rp.FilePath + ".xlsx"
+		}
+
+		match, _ = regexp.MatchString(`xls$`, rp.FilePath)
+		if match {
+			fmt.Printf("Warning: File \"%s\" has extension .xls, should be .xlsx\n", rp.FilePath)
+		}
 	}
+
 	if rp.RepSheet == "" {
 		if len(rp.RepTitle) > 30 {
 			rp.RepSheet = rp.RepTitle[:30]
@@ -92,6 +105,11 @@ func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 
 // ExcelMultiSheet generates a Report with Multiple Sheets
 func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
+
+	if filePath == "" {
+		return errors.New("filePath is empty string")
+	}
+
 	var file *xlsx.File
 
 	file = xlsx.NewFile()
@@ -119,6 +137,16 @@ func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
 		}
 	}
 
+	match, _ := regexp.MatchString(`(?m)([a-zA-Z0-9\s_\\.\-\(\):])+(.xls|.xlsx)$`, filePath)
+	if !match {
+		filePath = filePath + ".xlsx"
+	}
+
+	match, _ = regexp.MatchString(`xls$`, filePath)
+	if match {
+		fmt.Printf("Warning: File \"%s\" has extension .xls, should be .xlsx\n", filePath)
+	}
+
 	err := file.Save(filePath)
 	if err != nil {
 		return err
@@ -135,7 +163,19 @@ func ExcelFromDB(rp RepParams, db *sql.DB) error {
 
 	if rp.FilePath == "" {
 		rp.FilePath = rp.RepTitle + ".xlsx"
+	} else {
+		match, _ := regexp.MatchString(`(?m)([a-zA-Z0-9\s_\\.\-\(\):])+(.xls|.xlsx)$`, rp.FilePath)
+		if !match {
+			rp.FilePath = rp.FilePath + ".xlsx"
+		}
+
+		match, _ = regexp.MatchString(`xls$`, rp.FilePath)
+		if match {
+			fmt.Printf("Warning: File \"%s\" has extension .xls, should be .xlsx\n", rp.FilePath)
+		}
+
 	}
+
 	if rp.RepSheet == "" {
 		if len(rp.RepTitle) > 30 {
 			rp.RepSheet = rp.RepTitle[:30]
@@ -180,6 +220,16 @@ func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
 		genSheetFromDB(file, k.Params, k.DB)
 	}
 
+	match, _ := regexp.MatchString(`(?m)([a-zA-Z0-9\s_\\.\-\(\):])+(.xls|.xlsx)$`, filePath)
+	if !match {
+		filePath = filePath + ".xlsx"
+	}
+
+	match, _ = regexp.MatchString(`xls$`, filePath)
+	if match {
+		fmt.Printf("Warning: File \"%s\" has extension .xls, should be .xlsx\n", filePath)
+	}
+
 	err := file.Save(filePath)
 	if err != nil {
 		return err
@@ -203,7 +253,21 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 		return err
 	}
 
-	// Add Titles
+	startRow := 1
+	if !rp.NoTitleRow {
+		startRow = 4
+		// Add Report Title
+		sheet.AddRow() // Skip a Row
+		cell := sheet.AddRow().AddCell()
+		s := cell.GetStyle()
+		s.Font.Size = 18
+		s.Font.Bold = true
+		s.ApplyFont = true
+		cell.Value = rp.RepTitle
+		row = sheet.AddRow()
+	}
+
+	// Add Column Titles
 	row = sheet.AddRow()
 	for _, k := range rp.RepCols {
 		cell := row.AddCell()
@@ -217,13 +281,13 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 		cell.Value = k.Title
 	}
 
-	var i int
 	flag := false
 
 	/*
 		// Add Rows (Ordered Rows, fast)
 		// This code assumes key is int, is incremental and begins at 1
 		// Assures 100% that the report will be generated in the intended order
+		var i int
 		nitems := rdata.Len()
 		for i = 1; i < nitems; i++ {
 			v := rdata.MapIndex(reflect.ValueOf(i))
@@ -346,10 +410,22 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 
 	_ = sheet.SetColWidth(0, len(rp.RepCols)-1, 28.0)
 	if rp.AutoFilter {
-		brCell := string(64+len(rp.RepCols)) + strconv.Itoa(i+1)
-		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: brCell}
+		var brCell string
+		c := len(rp.RepCols)
+		for i := 65; c > 26; c -= 26 {
+			brCell = string(i)
+			i++
+		}
+		brCell = brCell + string(64+c) + strconv.Itoa(qkeys+startRow)
+		tpCell := "A" + strconv.Itoa(startRow)
+		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: tpCell, BottomRightCell: brCell}
 	}
-
+	/*
+		if rp.AutoFilter {
+			brCell := string(64+len(rp.RepCols)) + strconv.Itoa(qkeys+4)
+			sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A4", BottomRightCell: brCell}
+		}
+	*/
 	if qkeys != 0 { // If there's Data to be Processed
 		row = sheet.AddRow()
 
@@ -361,7 +437,7 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 			s.Fill.FgColor = "00D0CECE"
 			s.ApplyFill = true
 			if col.SumFlag {
-				formula := "=SUBTOTAL(109," + colLetter + "2:" + colLetter + strconv.Itoa(qkeys+1) + ")"
+				formula := "=SUBTOTAL(109," + colLetter + strconv.Itoa(startRow+1) + ":" + colLetter + strconv.Itoa(startRow+qkeys) + ")"
 				cell.SetFloatWithFormat(0, "$#,##0.00")
 				cell.SetFormula(formula)
 				s.Font.Bold = true
@@ -392,6 +468,20 @@ func genSheetFromDB(file *xlsx.File, rp RepParams, db *sql.DB) error {
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
+	}
+
+	startRow := 1
+	if !rp.NoTitleRow {
+		startRow = 4
+		// Add Report Title
+		sheet.AddRow() // Skip a Row
+		cell := sheet.AddRow().AddCell()
+		s := cell.GetStyle()
+		s.Font.Size = 18
+		s.Font.Bold = true
+		s.ApplyFont = true
+		cell.Value = rp.RepTitle
+		row = sheet.AddRow()
 	}
 
 	// Add Titles
@@ -449,8 +539,9 @@ func genSheetFromDB(file *xlsx.File, rp RepParams, db *sql.DB) error {
 			brCell = string(i)
 			i++
 		}
-		brCell = brCell + string(64+c) + strconv.Itoa(i+1)
-		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: brCell}
+		brCell = brCell + string(64+c) + strconv.Itoa(i+startRow)
+		tpCell := "A" + strconv.Itoa(startRow)
+		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: tpCell, BottomRightCell: brCell}
 	}
 
 	if i != 0 { // If there's Data to be Processed
