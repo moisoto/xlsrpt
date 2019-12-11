@@ -157,6 +157,13 @@ func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
 
 // ExcelFromDB can be used when the selected columns are not known uses reflect to infer data type directly from DB
 func ExcelFromDB(rp RepParams, db *sql.DB) error {
+
+	driverType := reflect.TypeOf(db.Driver())
+	switch driverType.String() {
+	case "*mysql.MySQLDriver":
+		fmt.Printf("Warning: MySQL Driver is not reflect friendly.\nPlease use ExcelReport() function for MySQL databases.\n")
+	}
+
 	var file *xlsx.File
 
 	file = xlsx.NewFile()
@@ -216,6 +223,12 @@ func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
 		}
 		if Vervose {
 			fmt.Println("Adding Sheet", k.Params.RepSheet)
+		}
+
+		driverType := reflect.TypeOf(k.DB.Driver())
+		switch driverType.String() {
+		case "*mysql.MySQLDriver":
+			fmt.Printf("On Report Sheet \"%s\" - Warning: MySQL Driver is not reflect friendly.\nPlease use ExcelMultiSheet() function for MySQL databases.\n", k.Params.RepSheet)
 		}
 		genSheetFromDB(file, k.Params, k.DB)
 	}
