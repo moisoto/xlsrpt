@@ -10,25 +10,25 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-// CellInt Integer Cell Type
+// CellInt - Integer Cell Type
 type CellInt int
 
-// CellStr String Cell Type
+// CellStr - String Cell Type
 type CellStr string
 
-// CellNumeric Numeric Cell Type (Number with no format)
+// CellNumeric - Numeric Cell Type (Number with no format)
 type CellNumeric float64
 
-// CellDecimal Decimal Cell Type (Number with commas and 2 decimal places)
+// CellDecimal - Decimal Cell Type (Number with commas and 2 decimal places)
 type CellDecimal float64
 
-// CellPercent Decimal Cell Type (Number with commas and 2 decimal places)
+// CellPercent - Percent Cell Type
 type CellPercent float64
 
-// CellCurrency Currency Cell Type
+// CellCurrency - Currency Cell Type
 type CellCurrency float32
 
-// CellDate Date Cell Type
+// CellDate - Date Cell Type
 type CellDate time.Time
 
 /*
@@ -42,6 +42,8 @@ type cellAdder interface {
 }
 */
 
+
+// Library behavior configuration variables.
 var (
 	// LogBench can be used to log benchmark information of report creation (unimplemented)
 	LogBench bool

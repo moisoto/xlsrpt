@@ -1,3 +1,5 @@
+// Package xlsrpt allows easy generation of Excel Reports.
+// Report is generated from a *sql.DB datasource.
 package xlsrpt
 
 import (
@@ -14,13 +16,13 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-// RepColumns Report Columns Definition
+// Report Columns Definition
 type RepColumns struct {
 	Title   string
 	SumFlag bool
 }
 
-// RepParams Parameters for Report Generation
+// Parameters for Report Generation
 type RepParams struct {
 	RepTitle   string
 	RepSheet   string
