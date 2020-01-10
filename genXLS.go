@@ -16,13 +16,13 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-// Report Columns Definition
+// RepColumns - Report Columns Definition.
 type RepColumns struct {
 	Title   string
 	SumFlag bool
 }
 
-// Parameters for Report Generation
+// RepParams - Parameters for Report Generation.
 type RepParams struct {
 	RepTitle   string
 	RepSheet   string
@@ -34,25 +34,25 @@ type RepParams struct {
 	NoTitleRow bool
 }
 
-// MultiSheetRep type is used for multiple sheets reports
+// MultiSheetRep type is used for multiple sheets reports.
 type MultiSheetRep struct {
 	Params RepParams
 	Data   ReportData
 	DB     *sql.DB
 }
 
-// ReportData defines LoadRows function that must be implemented
+// ReportData defines LoadRows function that must be implemented.
 type ReportData interface {
 	LoadRows(rows *sql.Rows) error
 }
 
-// Vervose can be used to print information about Excel File generation when set to <true>
+// Vervose can be used to print information about Excel File generation when set to <true>.
 var Vervose bool
 
-// Debug can be used to print debug information about Excel File generation when set to <true>
+// Debug can be used to print debug information about Excel File generation when set to <true>.
 var Debug bool
 
-// ExcelReport generates excel report
+// ExcelReport generates excel report.
 func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 	var file *xlsx.File
 
@@ -105,7 +105,7 @@ func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 	return nil
 }
 
-// ExcelMultiSheet generates a Report with Multiple Sheets
+// ExcelMultiSheet generates a Report with Multiple Sheets.
 func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
 
 	if filePath == "" {
@@ -157,7 +157,10 @@ func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
 	return nil
 }
 
-// ExcelFromDB can be used when the selected columns are not known uses reflect to infer data type directly from DB
+/*
+ExcelFromDB can be used when the selected columns are not known.
+Uses reflect to infer data type directly from DB.
+*/
 func ExcelFromDB(rp RepParams, db *sql.DB) error {
 
 	driverType := reflect.TypeOf(db.Driver())
@@ -206,7 +209,8 @@ func ExcelFromDB(rp RepParams, db *sql.DB) error {
 	return nil
 }
 
-// ExcelMultiSheetFromDB generates a Report with Multiple Sheets uses reflect to infer data type directly from DB
+// ExcelMultiSheetFromDB generates a Report with Multiple Sheets.
+// Uses reflect to infer data type directly from DB.
 func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
 
 	// Make sure they are sorted
@@ -253,7 +257,7 @@ func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
 	return nil
 }
 
-// genSheet adds the report in a new sheet
+// genSheet adds the report in a new sheet.
 func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 	var sheet *xlsx.Sheet
 	var row *xlsx.Row

@@ -10,25 +10,25 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-// CellInt - Integer Cell Type
+// CellInt - Integer Cell Type.
 type CellInt int
 
-// CellStr - String Cell Type
+// CellStr - String Cell Type.
 type CellStr string
 
-// CellNumeric - Numeric Cell Type (Number with no format)
+// CellNumeric - Numeric Cell Type (Number with no format).
 type CellNumeric float64
 
-// CellDecimal - Decimal Cell Type (Number with commas and 2 decimal places)
+// CellDecimal - Decimal Cell Type (Number with commas and 2 decimal places).
 type CellDecimal float64
 
-// CellPercent - Percent Cell Type
+// CellPercent - Percent Cell Type.
 type CellPercent float64
 
-// CellCurrency - Currency Cell Type
+// CellCurrency - Currency Cell Type.
 type CellCurrency float32
 
-// CellDate - Date Cell Type
+// CellDate - Date Cell Type.
 type CellDate time.Time
 
 /*
@@ -42,20 +42,19 @@ type cellAdder interface {
 }
 */
 
-
 // Library behavior configuration variables.
 var (
-	// LogBench can be used to log benchmark information of report creation (unimplemented)
+	// LogBench can be used to log benchmark information of report creation (unimplemented).
 	LogBench bool
 
-	// UntouchStrings can be used to leave strings untouched
+	// UntouchStrings can be used to leave strings untouched.
 	UntouchStrings bool
 
-	// UntouchCols can be used to set columns that must not be formatted
+	// UntouchCols can be used to set columns that must not be formatted.
 	UntouchCols []string
 )
 
-// AddRow adds a row to excel report
+// AddRow adds a row to excel report.
 func addRow(fields interface{}, row *xlsx.Row, flag bool) {
 	var timeKind = reflect.TypeOf(time.Time{}).Kind()
 
@@ -243,7 +242,7 @@ func altBgColor(cell *xlsx.Cell, flag bool) {
 	}
 }
 
-// returns true if string is numeric and constains a dot
+// returns true if string is numeric and constains a dot.
 func isNum(s string) (nType int32, val float64) {
 	dotFound := false
 	percFound := false
