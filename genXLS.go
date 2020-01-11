@@ -41,7 +41,14 @@ type MultiSheetRep struct {
 	DB     *sql.DB
 }
 
-// ReportData defines LoadRows function that must be implemented.
+/*
+ReportData defines LoadRows() function that must be implemented
+
+Implement this by creating a struct with the fields you want to use as columns in the report.
+Then create a map with items of the structure type (map key can be any type).
+
+Note that this is only needed when using ExcelReport() or ExcelMultiSheet() functions.
+*/
 type ReportData interface {
 	LoadRows(rows *sql.Rows) error
 }
@@ -52,7 +59,7 @@ var Vervose bool
 // Debug can be used to print debug information about Excel File generation when set to <true>.
 var Debug bool
 
-// ExcelReport generates excel report.
+// ExcelReport generates excel report using a datamap that should be loaded by your implementation of LoadRows() function
 func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 	var file *xlsx.File
 
@@ -105,7 +112,7 @@ func ExcelReport(rp RepParams, rptData ReportData, db *sql.DB) error {
 	return nil
 }
 
-// ExcelMultiSheet generates a Report with Multiple Sheets.
+// ExcelMultiSheet generates a Report with Multiple Sheets using a datamap that should be loaded by your implementation of LoadRows() function.
 func ExcelMultiSheet(filePath string, reports []MultiSheetRep) error {
 
 	if filePath == "" {
