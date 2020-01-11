@@ -5,7 +5,7 @@ Excel Reports Generator Package
 Easy & Flexible Excel Report Generator Package for go.
 
 ### Usage
-#### For detailed documentation and example please see https://godoc.org/github.com/moisoto/xlsrpt
+#### For detailed documentation and examples please see https://godoc.org/github.com/moisoto/xlsrpt
 
 There are four ways to generate a report. Each of the following functions can be used depending your needs:
 - ExcelFromDB()
