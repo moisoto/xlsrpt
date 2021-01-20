@@ -31,7 +31,7 @@ func ExampleExcelMultiSheet() {
 					{Title: "Last Name", SumFlag: false},
 					{Title: "Customer Number", SumFlag: false},
 					{Title: "Customer Balance", SumFlag: true}},
-				Query: "SELECT CreationDate, FirstName, LastName, CustomerNumber, Balance FROM Customer;",
+				Query:      "SELECT CreationDate, FirstName, LastName, CustomerNumber, Balance FROM Customer;",
 				AutoFilter: true},
 			Data: rptData1,
 			DB:   database},
@@ -45,11 +45,11 @@ func ExampleExcelMultiSheet() {
 					{Title: "Last Name", SumFlag: false},
 					{Title: "Customer Number", SumFlag: false},
 					{Title: "Customer Balance", SumFlag: true}},
-				Query: "SELECT CreationDate, FirstName, LastName, CustomerNumber, Balance FROM Customer WHERE vip=1;",
+				Query:      "SELECT CreationDate, FirstName, LastName, CustomerNumber, Balance FROM Customer WHERE vip=1;",
 				AutoFilter: true},
 			Data: rptData2,
 			DB:   database}}
 
-	// Just call ExcelMultiSheet and pass the file name and report parameters. 
+	// Just call ExcelMultiSheet and pass the file name and report parameters.
 	xlsrpt.ExcelMultiSheet("Customer Report.xlsx", repParams)
 }
