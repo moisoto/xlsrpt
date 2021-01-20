@@ -238,6 +238,7 @@ func ExcelMultiSheetFromDB(filePath string, reports []MultiSheetRep) error {
 			fmt.Println("Adding Sheet", k.Params.RepSheet)
 		}
 
+		// TODO(moisoto): Test other drivers (tested on mssql and oracle)
 		driverType := reflect.TypeOf(k.DB.Driver())
 		switch driverType.String() {
 		case "*mysql.MySQLDriver":

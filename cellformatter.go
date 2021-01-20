@@ -93,7 +93,7 @@ func addRow(fields interface{}, row *xlsx.Row, flag bool) {
 func addMapRow(ordColumns []string, mapRow map[string]interface{}, row *xlsx.Row, flag bool) {
 	var timeKind = reflect.TypeOf(time.Time{}).Kind()
 
-	// Preload lenght of UntouchCols so we don't do it for each column
+	// Preload length of UntouchCols so we don't do it for each column
 	l := len(UntouchCols)
 
 	for _, v := range ordColumns {
@@ -150,7 +150,8 @@ func addMapRow(ordColumns []string, mapRow map[string]interface{}, row *xlsx.Row
 				*/
 			}
 			if goStr {
-				goStr = true
+				// TODO(moisoto): Debug ineffectual assignment. Check if it was supposed to revert to false
+				// goStr = true
 
 				v := CellStr(val.String())
 				altBgColor(v.addCell(row), flag)

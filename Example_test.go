@@ -2,7 +2,6 @@ package xlsrpt_test
 
 import (
 	"database/sql"
-
 )
 
 func dbConnect() (*sql.DB, error) {
