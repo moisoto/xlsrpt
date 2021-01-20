@@ -1,3 +1,6 @@
+[![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg?color=%237fd5ea)](http://golang.org)
+[![GoReportCard](https://goreportcard.com/badge/github.com/moisoto/xlsrpt)](https://goreportcard.com/report/github.com/moisoto/xlsrpt)
+
 # xlsrpt
 Excel Reports Generator Package
 
