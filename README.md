@@ -1,7 +1,10 @@
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg?color=%237fd5ea)](http://golang.org)
 [![Go Reference](https://pkg.go.dev/badge/github.com/moisoto/xlsrpt.svg)](https://pkg.go.dev/github.com/moisoto/xlsrpt)
-[![GoReportCard](https://goreportcard.com/badge/github.com/moisoto/xlsrpt)](https://goreportcard.com/report/github.com/moisoto/xlsrpt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![Release](https://img.shields.io/github/v/tag/moisoto/xlsrpt?label=Release&sort=semver)](https://github.com/moisoto/xlsrpt/releases/latest)
+[![GoReportCard](https://goreportcard.com/badge/github.com/moisoto/xlsrpt)](https://goreportcard.com/report/github.com/moisoto/xlsrpt)
+
 
 # xlsrpt
 Excel Reports Generator Package
