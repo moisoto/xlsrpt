@@ -269,10 +269,9 @@ func isNum(s string) (nType int32, val float64) {
 	}
 
 	for _, v := range s {
-		if v != '.' && v != '%' && (v<'0' || v >'9') {
-			return 0, 0
-		}
-		/*
+		//if v != '.' && v != '%' && (v<'0' || v >'9') {
+		//	return 0, 0
+		//}
 		switch v {
 		case '.':
 		case '%':
@@ -282,7 +281,6 @@ func isNum(s string) (nType int32, val float64) {
 				return 0, 0
 			}
 		}
-		*/
 	}
 
 	fmt.Println("To the meat!")
