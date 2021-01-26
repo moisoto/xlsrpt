@@ -249,38 +249,16 @@ func isNum(s string) (nType int32, val float64) {
 	dotFound := false
 	percFound := false
 
-	dot := strings.Count(s, ".")
-	if dot > 0 {
+	if strings.Index(s, "%") > 0 {
 		dotFound = true
 	}
-	/* Not Really Needed (ParseFloat() will handle error)
-	switch dot {
-	case 0:
-		// Do Nothing if no dot
-	case 1:
-		dotFound = true
-	default:
-		// More than one dot
-		return 0, 0
-	}
-	*/
 
-	perc := strings.Index(s, "%")
-	if perc == len(s)-1 {
+	percLoc := strings.Index(s, "%")
+	if percLoc == len(s)-1 {
 		percFound = true
-	} else if perc > -1 {
+	} else if percLoc > -1 {
 		return 0, 0
 	}
-
-	/* Not Really Needed (ParseFloat() will handle error)
-	for _, v := range s {
-		if v != '.' && v != '%' && (v<'0' || v >'9') {
-			return 0, 0
-		}
-	}
-	*/
-
-	fmt.Println("To the meat!")
 
 	if dotFound {
 		if !percFound {
