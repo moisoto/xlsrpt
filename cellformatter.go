@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tealeg/xlsx"
@@ -247,116 +248,58 @@ func altBgColor(cell *xlsx.Cell, flag bool) {
 func isNum(s string) (nType int32, val float64) {
 	dotFound := false
 	percFound := false
-	percLast := false
+
+	dot := strings.Count(s, ".")
+	switch dot {
+	case 0:
+		// Do Nothing if no dot
+	case 1:
+		dotFound = true
+	default:
+		// More than one dot
+		return 0, 0
+	}
+
+	perc := strings.Index(s, "%")
+
+	if perc == len(s)-1 {
+		percFound = true
+	} else if perc > -1 {
+		return 0, 0
+	}
+
 	for _, v := range s {
+		//if v != '.' && v != '%' && (v<'0' || v >'9') {
+		//	return 0, 0
+		//}
 		switch v {
 		case '.':
-			if dotFound {
-				return 0, 0
-			}
-			dotFound = true
-			percLast = false
 		case '%':
-			if percFound {
-				return 0, 0
-			}
-			percFound = true
-			percLast = true
 		default:
+			// If not '.' nor '%' nor
 			if v < '0' || v > '9' {
 				return 0, 0
 			}
-			percLast = false
 		}
 	}
+
+	fmt.Println("To the meat!")
+
 	if dotFound {
-		if percLast {
-			ns := s[0 : len(s)-1]
-			f, err := strconv.ParseFloat(ns, 64)
-			if err != nil || f > 1 {
-				return 0, 0
-			}
-			return 'p', f
-		}
 		if !percFound {
-			f, err := strconv.ParseFloat(s, 64)
-			if err != nil {
-				return 0, 0
-			}
-			return 'd', f
+			nType = 'd'
+		} else {
+			s = s[0 : len(s)-1]
+			nType = 'p'
 		}
+	} else {
+		nType = 'i'
 	}
 
 	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
+	if err != nil || (nType == 'p' && f > 1) {
 		return 0, 0
 	}
-	return 'i', f
+
+	return nType, f
 }
-
-/*
-// returns true if string is numeric with no decimal part
-func isNum(s string) bool {
-	for _, v := range s {
-		if v < '0' || v > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-
-// returns true if string is numeric and constains a dot
-func isNumDot(s string) bool {
-	dotFound := false
-	for _, v := range s {
-		if v == '.' {
-			if dotFound {
-				return false
-			}
-			dotFound = true
-		} else if v < '0' || v > '9' {
-			return false
-		}
-	}
-
-	return dotFound
-}
-
-// returns true if string is numeric, constains a dot and ends on percent
-func isNumPerc(s string) (bool, float64) {
-	dotFound := false
-	percFound := false
-	percLast := false
-	for _, v := range s {
-		switch v {
-		case '.':
-			if dotFound {
-				return false, 0
-			}
-			dotFound = true
-			percLast = false
-		case '%':
-			if percFound {
-				return false, 0
-			}
-			percFound = true
-			percLast = true
-		default:
-			if v < '0' || v > '9' {
-				return false, 0
-			}
-			percLast = false
-		}
-	}
-	if dotFound && percLast {
-		ns := s[0 : len(s)-1]
-		f, err := strconv.ParseFloat(ns, 64)
-		if err != nil || f > 1 {
-			return false, 0
-		}
-		return true, f
-	}
-	return false, 0
-}
-*/
