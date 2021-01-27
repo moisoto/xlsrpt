@@ -440,10 +440,10 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 		var brCell string
 		c := len(rp.RepCols)
 		for i := 65; c > 26; c -= 26 {
-			brCell = string(i)
+			brCell = string(rune(i))
 			i++
 		}
-		brCell = brCell + string(64+c) + strconv.Itoa(qkeys+startRow)
+		brCell = brCell + string(rune(64+c)) + strconv.Itoa(qkeys+startRow)
 		tpCell := "A" + strconv.Itoa(startRow)
 		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: tpCell, BottomRightCell: brCell}
 	}
@@ -457,7 +457,7 @@ func genSheet(file *xlsx.File, rp RepParams, dataMap interface{}) error {
 		row = sheet.AddRow()
 
 		for c, col := range rp.RepCols {
-			colLetter := string(c + 65)
+			colLetter := string(rune(c + 65))
 			cell := row.AddCell()
 			s := cell.GetStyle()
 			s.Fill.PatternType = "solid"
@@ -563,10 +563,10 @@ func genSheetFromDB(file *xlsx.File, rp RepParams, db *sql.DB) error {
 		var brCell string
 		c := len(cols)
 		for i = 65; c > 26; c -= 26 {
-			brCell = string(i)
+			brCell = string(rune(i))
 			i++
 		}
-		brCell = brCell + string(64+c) + strconv.Itoa(i+startRow)
+		brCell = brCell + string(rune(64+c)) + strconv.Itoa(i+startRow)
 		tpCell := "A" + strconv.Itoa(startRow)
 		sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: tpCell, BottomRightCell: brCell}
 	}
