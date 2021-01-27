@@ -132,28 +132,8 @@ func addMapRow(ordColumns []string, mapRow map[string]interface{}, row *xlsx.Row
 				default:
 					goStr = true
 				}
-				/*
-					// Use isNumDot instead ParseFloat here since it's faster. Only use ParseFloat if number is detected
-					if isNumDot(str) { // Numeric Strings with decimal places are treated as percent values
-						f, err := strconv.ParseFloat(str, 64)
-						if err == nil {
-							v := CellNumeric(f)
-							altBgColor(v.addCell(row), flag)
-							goStr = false // ParseFloat didn't fail don't add as String
-						}
-					}
-					isPerc, f := isNumPerc(str)
-					if isPerc { // Numeric Strings with decimal places are treated as percent values
-						v := CellPercent(f)
-						altBgColor(v.addCell(row), flag)
-						goStr = false // ParseFloat didn't fail don't add as String
-					}
-				*/
 			}
 			if goStr {
-				// TODO(moisoto): Debug ineffectual assignment. Check if it was supposed to revert to false
-				// goStr = true
-
 				v := CellStr(val.String())
 				altBgColor(v.addCell(row), flag)
 			}
